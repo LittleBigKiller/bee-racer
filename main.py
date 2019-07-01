@@ -20,6 +20,14 @@ clock = pygame.time.Clock()
 carImg = pygame.image.load('assets/sprites/F1Car.png')
 
 
+def score_display(count, color=color_black):
+    font = pygame.font.SysFont(None, 25)
+    text = font.render("Score: " + str(count), True, color)
+    gameDisplay.blit(text, (5, 5))
+
+    pygame.display.update()
+
+
 def obstacles(x, y, w, h, color):
     pygame.draw.rect(gameDisplay, color, [x, y, w, h])
 
@@ -39,21 +47,29 @@ def text_objects(text, font, color):
 def message_display(text, color=color_black, bgColor=color_white):
     gameDisplay.fill(bgColor)
 
-    textStyle = pygame.font.Font('freesansbold.ttf', 115)
+    textStyle = pygame.font.Font('freesansbold.ttf', 120)
     TextSurf, TextRect = text_objects(text, textStyle, color)
-    TextRect.center = ((display_width / 2, display_height/2))
+    TextRect.center = ((display_width / 2, display_height / 2 - 20))
     gameDisplay.blit(TextSurf, TextRect)
 
     pygame.display.update()
 
-    time.sleep(2)
 
-    game_loop()
+def subMessage_display(text, color=color_black):
+    textStyle = pygame.font.Font('freesansbold.ttf', 40)
+    TextSurf, TextRect = text_objects(text, textStyle, color)
+    TextRect.center = ((display_width / 2, display_height / 2 + 60))
+    gameDisplay.blit(TextSurf, TextRect)
+
+    pygame.display.update()
 
 
-def crash():
+def crash(score):
     time.sleep(0.5)
     message_display('Game Over!', color_red, color_black)
+    subMessage_display("Your score: " + str(score), color_blue)
+    time.sleep(2)
+    game_loop()
 
 
 def game_loop():
@@ -65,6 +81,8 @@ def game_loop():
     obstacle_speed = 10
     obstacle_width = 100
     obstacle_height = 100
+
+    score = 0
 
     playerInput = dict(
         left=False,
@@ -110,16 +128,21 @@ def game_loop():
         obstacles(obstacle_startX, obstacle_startY,
                   obstacle_width, obstacle_height, color_black)
 
+        score_display(score)
+
         if x < 0 or x > display_width - carImg.get_width():
-            crash()
+            crash(score)
 
         if obstacle_startY > display_height:
             obstacle_startY = -obstacle_height
             obstacle_startX = random.randrange(0, display_width)
+            score += 1
+            if score % 5 == 0:
+                obstacle_speed += 1
 
-        if y < obstacle_startY + obstacle_height:
-            if x > obstacle_startX and x < obstacle_startX + obstacle_width or x + carImg.get_width() > obstacle_startX and x + carImg.get_width() < obstacle_startX + obstacle_width:
-                crash()
+        if y < obstacle_startY + obstacle_height and y + carImg.get_height() > obstacle_startY:
+            if x < obstacle_startX + obstacle_width and x + carImg.get_width() > obstacle_startX:
+                crash(score)
 
         pygame.display.update()
         clock.tick(60)
