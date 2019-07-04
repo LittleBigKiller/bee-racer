@@ -22,7 +22,81 @@ gameDisplay = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('bee-racer')
 clock = pygame.time.Clock()
 
-tempCar = pygame.image.load('assets/sprites/F1Car.png')
+tempCar = pygame.image.load('assets/sprites/F1Car_Red.png')
+
+
+class Player:
+    def __init__(self, name, x, y):
+        self.image = pygame.image.load('assets/sprites/F1Car_Red.png')
+        self.name = name
+        self.x = y
+        self.y = y
+        self.speed = 0
+        self.distance = 0
+        self.score = 0
+        self.playerInput = dict(
+            left=False,
+            right=False,
+            up=False,
+            down=False,
+            fire=False,
+        )
+
+    def printname(self):
+        print("Issa me, " + self.name + "!")
+
+    def draw(self, debugHitbox=False):
+        if debugHitbox:
+            pygame.draw.rect(gameDisplay, color_green, [
+                             self.x, self.y, tempCar.get_width(), tempCar.get_height()])
+        gameDisplay.blit(self.image, (self.x, self.y - self.speed))
+
+    def checkinputs(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                self.playerInput['left'] = True
+            elif event.key == pygame.K_RIGHT:
+                self.playerInput['right'] = True
+            elif event.key == pygame.K_UP:
+                self.playerInput['up'] = True
+            elif event.key == pygame.K_DOWN:
+                self.playerInput['down'] = True
+
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT:
+                self.playerInput['left'] = False
+            elif event.key == pygame.K_RIGHT:
+                self.playerInput['right'] = False
+            elif event.key == pygame.K_UP:
+                self.playerInput['up'] = False
+            elif event.key == pygame.K_DOWN:
+                self.playerInput['down'] = False
+
+    def reactinput(self):
+        if self.playerInput['left']:
+            self.x -= 5
+        if self.playerInput['right']:
+            self.x += 5
+        if self.playerInput['down']:
+            if self.speed > 0:
+                self.speed -= 5
+        if self.playerInput['up']:
+            if self.speed < 180:
+                self.speed += 1
+
+        if self.x < 0:
+            self.x = 0
+        if self.x > display_width - self.image.get_width():
+            self.x = display_width - self.image.get_width()
+
+        self.distance += self.speed
+
+        if self.speed >= 50:
+            self.score += 1
+        if self.speed >= 100:
+            self.score += 1
+        if self.speed >= 150:
+            self.score += 1
 
 
 def car(x, y, debugHitbox=False):
@@ -51,15 +125,7 @@ def game_loop():
     x = (display_width / 2 - tempCar.get_width()/2)
     y = (display_height / 2 + 200 - tempCar.get_height()/2)
 
-    playerInput = dict(
-        left=False,
-        right=False,
-        up=False,
-        down=False,
-        fire=False,
-    )
-
-    speed = 0
+    player = Player("LMAO", x, y)
 
     score = 0
     distance = 0
@@ -72,60 +138,19 @@ def game_loop():
                 pygame.quit()
                 quit()
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    playerInput['left'] = True
-                elif event.key == pygame.K_RIGHT:
-                    playerInput['right'] = True
-                elif event.key == pygame.K_UP:
-                    playerInput['up'] = True
-                elif event.key == pygame.K_DOWN:
-                    playerInput['down'] = True
-
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_LEFT:
-                    playerInput['left'] = False
-                elif event.key == pygame.K_RIGHT:
-                    playerInput['right'] = False
-                elif event.key == pygame.K_UP:
-                    playerInput['up'] = False
-                elif event.key == pygame.K_DOWN:
-                    playerInput['down'] = False
+            player.checkinputs(event)
 
         # Early Frame Code
-        if playerInput['left']:
-            x -= 5
-        if playerInput['right']:
-            x += 5
-        if playerInput['down']:
-            if speed > 0:
-                speed -= 5
-        if playerInput['up']:
-            if speed < 180:
-                speed += 1
-
-        if x < 0:
-            x = 0
-        if x > display_width - tempCar.get_width():
-            x = display_width - tempCar.get_width()
-
-        distance += speed
-
-        if speed >= 50:
-            score += 1
-        if speed >= 100:
-            score += 1
-        if speed >= 150:
-            score += 1
+        player.reactinput()
 
         # Draw Game Objects
         gameDisplay.fill(color_white)
 
-        car(x, y - speed)
+        player.draw()
 
         # UI
-        debug_display_speed(speed)
-        display_score(score)
+        debug_display_speed(player.speed)
+        display_score(player.score)
 
         # Late Frame Code
 
