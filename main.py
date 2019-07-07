@@ -141,7 +141,7 @@ class Player:
         self.doChecks = False
 
     def resumeChecks(self):
-        if not doChecks and pygame.time.get_ticks() - self.holdStart >= 200:
+        if not self.doChecks and pygame.time.get_ticks() - self.holdStart >= 200:
             self.doChecks = True
 
     def draw(self):
@@ -154,7 +154,8 @@ class Player:
         text = font.render('Player ' + str(self.ident), True, self.color)
         gameDisplay.blit(text, (80 + self.ident * 320, 730))
         if self.alive:
-            text = font.render('Lap: ' + str(self.lapCount) + '/' + str(settings_maxlaps), True, self.color)
+            text = font.render('Lap: ' + str(self.lapCount) +
+                               '/' + str(settings_maxlaps), True, self.color)
             gameDisplay.blit(text, (80 + self.ident * 320, 760))
         else:
             text = font.render('DEAD', True, self.color)
@@ -319,9 +320,9 @@ def game_loop():
                 # Collision check
                 if player.x > 368 and player.x < 912:
                     if player.y + settings_imagesize / 2 > 18 and player.y - settings_imagesize / 2 < 182:
-                        continue
+                        pass
                     elif player.y + settings_imagesize / 2 > 538 and player.y - settings_imagesize / 2 < 702:
-                        continue
+                        pass
                     else:
                         player.alive = False
                         player.updateLapCounter()
@@ -338,18 +339,50 @@ def game_loop():
                     dist1 = math.sqrt(dx1 * dx1 + dy1 * dy1)
 
                     if dist0 + settings_imagesize / 2 > 178 and dist0 - settings_imagesize / 2 < display_height / 2 - 18:
-                        continue
+                        pass
                     elif dist1 + settings_imagesize / 2 > 178 and dist1 - settings_imagesize / 2 < display_height / 2 - 18:
-                        continue
+                        pass
                     else:
                         player.alive = False
                         player.updateLapCounter()
                         if len(players) == 1:
                             gameOver = True
                         checkAlive()
+
+                # Lap checks
+                player.resumeChecks()
+                if player.x > 635 and player.x < 645 and player.doChecks:
+                    player.holdChecks()
+                    if player.check1:
+                        player.check3 = True
+                        print('Player ' + str(player.ident) + ' passed checkpoint 3')
+                    else:
+                        player.check1 = True
+                        print('Player ' + str(player.ident) + ' passed checkpoint 1')
+                if player.y > 355 and player.y < 375 and player.doChecks:
+                    player.holdChecks()
+                    if player.check0:
+                        player.check2 = True
+                        print('Player ' + str(player.ident) + ' passed checkpoint 2')
+                    else:
+                        player.check0 = True
+                        print('Player ' + str(player.ident) + ' passed checkpoint 0')
+                if player.x > 355 and player.x < 375:
+                    if player.check0 and player.check1 and player.check2 and player.check3:
+                        if player.lapCount != 0:
+                            print('Player ' + str(player.ident) + ' finished a lap')
+                        player.check0 = False
+                        player.check1 = False
+                        player.check2 = False
+                        player.check3 = False
+                        player.lapCount += 1
+                        if player.lapCount > settings_maxlaps:
+                            winner = player.ident
+                            gameOver = True
+
             else:
                 # Trail of dead player
-                continue
+                pass
 
         # Update Scoreboard
         for player in players:
