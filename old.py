@@ -17,10 +17,10 @@ gameDisplay = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('Bee Racer')
 clock = pygame.time.Clock()
 
-carImg = pygame.image.load('assets/sprites/F1Car.png')
+carImg = pygame.image.load('assets/sprites/F1Car_Red.png')
 
 
-def game_intro():
+""" def game_intro():
 
     intro = True
 
@@ -35,7 +35,7 @@ def game_intro():
         message_display('Bee Racer', color_green, color_white)
 
         pygame.display.update()
-        clock.tick(15)
+        clock.tick(15) """
 
 
 def score_display(count, color=color_black):
@@ -54,7 +54,9 @@ def car(x, y, debugHitbox=False):
     if debugHitbox:
         pygame.draw.rect(gameDisplay, color_green, [
                          x, y, carImg.get_width(), carImg.get_height()])
-    gameDisplay.blit(carImg, (x, y))
+    rotCar = pygame.transform.rotate(carImg, 90)
+    rotRect = rotCar.get_rect(center=carImg.get_rect().center)
+    gameDisplay.blit(rotCar, rotRect)
 
 
 def text_objects(text, font, color):
@@ -162,7 +164,7 @@ def game_loop():
         clock.tick(60)
 
 
-game_intro()
+""" game_intro() """
 game_loop()
 
 pygame.quit()
