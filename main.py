@@ -1,11 +1,13 @@
-import pygame
-import time
+import math
 import random
+import time
+
+import pygame
 
 pygame.init()
 
-display_width = 800
-display_height = 600
+display_width = 1280
+display_height = 720
 
 color_black = (0, 0, 0)
 color_white = (255, 255, 255)
@@ -18,144 +20,348 @@ color_red = (255, 0, 0)
 color_green = (0, 255, 0)
 color_blue = (0, 0, 255)
 
-gameDisplay = pygame.display.set_mode((display_width, display_height))
+gameDisplay = pygame.display.set_mode((display_width, display_height + 80))
 pygame.display.set_caption('bee-racer')
 clock = pygame.time.Clock()
 
-tempCar = pygame.image.load('assets/sprites/F1Car_Red.png')
+settings_imagesize = 20
+settings_maxlaps = 3
+settings_p0KeyLeft = pygame.K_LEFT
+settings_p1KeyLeft = pygame.K_a
+settings_p2KeyLeft = pygame.K_f
+settings_p3KeyLeft = pygame.K_j
+settings_bgpattern = pygame.image.load('assets/backgrounds/pat_grass.jpg')
+
+players = []
+gameOver = False
+winner = -1
+
+
+def checkinputs(event):
+    if event.type == pygame.KEYDOWN:
+        if event.key == settings_p0KeyLeft:
+            try:
+                players[0].turnL = True
+            except IndexError:
+                return
+        elif event.key == settings_p1KeyLeft:
+            try:
+                players[1].turnL = True
+            except IndexError:
+                return
+        elif event.key == settings_p2KeyLeft:
+            try:
+                players[2].turnL = True
+            except IndexError:
+                return
+        elif event.key == settings_p3KeyLeft:
+            try:
+                players[3].turnL = True
+            except IndexError:
+                return
+
+    if event.type == pygame.KEYUP:
+        if event.key == settings_p0KeyLeft:
+            try:
+                players[0].turnL = False
+            except IndexError:
+                return
+        elif event.key == settings_p1KeyLeft:
+            try:
+                players[1].turnL = False
+            except IndexError:
+                return
+        elif event.key == settings_p2KeyLeft:
+            try:
+                players[2].turnL = False
+            except IndexError:
+                return
+        elif event.key == settings_p3KeyLeft:
+            try:
+                players[3].turnL = False
+            except IndexError:
+                return
+
+
+def createPlayer():
+    newPlayer = Player(len(players))
+
+    newPlayer.updateVel(0)
+    newPlayer.draw()
+
+    players.append(newPlayer)
 
 
 class Player:
-    def __init__(self, name, x, y):
-        self.image = pygame.image.load('assets/sprites/F1Car_Red.png')
-        self.name = name
-        self.x = y
-        self.y = y
-        self.speed = 0
-        self.distance = 0
-        self.score = 0
-        self.playerInput = dict(
-            left=False,
-            right=False,
-            up=False,
-            down=False,
-            fire=False,
-        )
+    def __init__(self, ident):
+        self.ident = ident
+        # Set movement parameters
+        self.v = 5
+        self.x = 340
+        self.y = 560 + ident * 40
+        self.vx = 0
+        self.vy = 0
+        self.a = math.pi / 2
 
-    def printname(self):
-        print("Issa me, " + self.name + "!")
+        # Set lap counting parameters
+        self.holdStart = 0
+        self.doChecks = True
+        self.check0 = True
+        self.check1 = True
+        self.check2 = True
+        self.check3 = True
+        self.lapCount = 0
 
-    def draw(self, debugHitbox=False):
-        if debugHitbox:
-            pygame.draw.rect(gameDisplay, color_green, [
-                             self.x, self.y, tempCar.get_width(), tempCar.get_height()])
-        gameDisplay.blit(self.image, (self.x, self.y - self.speed))
+        self.alive = True
+        self.turnL = False
+        self.image = pygame.image.load(
+            'assets/sprites/p' + str(ident) + '.png')
+        self.image = pygame.transform.scale(
+            self.image, (settings_imagesize, settings_imagesize))
 
-    def checkinputs(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                self.playerInput['left'] = True
-            elif event.key == pygame.K_RIGHT:
-                self.playerInput['right'] = True
-            elif event.key == pygame.K_UP:
-                self.playerInput['up'] = True
-            elif event.key == pygame.K_DOWN:
-                self.playerInput['down'] = True
+        # Set player color
+        if ident == 0:
+            self.color = (0, 0, 0)
+        elif ident == 1:
+            self.color = (255, 0, 0)
+        elif ident == 2:
+            self.color = (0, 255, 0)
+        elif ident == 3:
+            self.color = (0, 0, 255)
 
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT:
-                self.playerInput['left'] = False
-            elif event.key == pygame.K_RIGHT:
-                self.playerInput['right'] = False
-            elif event.key == pygame.K_UP:
-                self.playerInput['up'] = False
-            elif event.key == pygame.K_DOWN:
-                self.playerInput['down'] = False
+        # Set lap counter variables
 
-    def reactinput(self):
-        if self.playerInput['left']:
-            self.x -= 5
-        if self.playerInput['right']:
-            self.x += 5
-        if self.playerInput['down']:
-            if self.speed > 0:
-                self.speed -= 5
-        if self.playerInput['up']:
-            if self.speed < 180:
-                self.speed += 1
+    def updateVel(self, angle):
+        self.a += angle
+        self.vx = self.v * math.sin(self.a)
+        self.vy = self.v * math.cos(self.a)
 
-        if self.x < 0:
-            self.x = 0
-        if self.x > display_width - self.image.get_width():
-            self.x = display_width - self.image.get_width()
+    def holdChecks(self):
+        self.holdStart = pygame.time.get_ticks()
+        self.doChecks = False
 
-        self.distance += self.speed
+    def resumeChecks(self):
+        if not doChecks and pygame.time.get_ticks() - self.holdStart >= 200:
+            self.doChecks = True
 
-        if self.speed >= 50:
-            self.score += 1
-        if self.speed >= 100:
-            self.score += 1
-        if self.speed >= 150:
-            self.score += 1
+    def draw(self):
+        dispImage = pygame.transform.rotate(self.image, math.degrees(self.a))
+        gameDisplay.blit(
+            dispImage, (self.x - settings_imagesize / 2, self.y - settings_imagesize / 2))
+
+    def updateLapCounter(self):
+        font = pygame.font.SysFont(None, 36)
+        text = font.render('Player ' + str(self.ident), True, self.color)
+        gameDisplay.blit(text, (80 + self.ident * 320, 730))
+        if self.alive:
+            text = font.render('Lap: ' + str(self.lapCount) + '/' + str(settings_maxlaps), True, self.color)
+            gameDisplay.blit(text, (80 + self.ident * 320, 760))
+        else:
+            text = font.render('DEAD', True, self.color)
+            gameDisplay.blit(text, (80 + self.ident * 320, 760))
 
 
-def car(x, y, debugHitbox=False):
-    if debugHitbox:
-        pygame.draw.rect(gameDisplay, color_green, [
-                         x, y, tempCar.get_width(), tempCar.get_height()])
-    gameDisplay.blit(tempCar, (x, y))
-
-
-def debug_display_speed(value):
-    font = pygame.font.SysFont(None, 25)
-    text = font.render("Speed: " + str(value), True, color_black)
-    gameDisplay.blit(text, text.get_rect(
-        bottomright=(display_width - 5, display_height - 5)))
-    pygame.display.update()
-
-
-def display_score(value):
+""" def display_score(value):
     font = pygame.font.SysFont(None, 25)
     text = font.render("Score: " + str(value), True, color_black)
     gameDisplay.blit(text, (5, 5))
-    pygame.display.update()
+    pygame.display.update() """
+
+
+def checkAlive():
+    global gameOver
+    global winner
+    aliveCount = 0
+    for player in players:
+        if player.alive:
+            winner = player.ident
+            aliveCount += 1
+    if aliveCount == 1:
+        gameOver = True
+
+
+def draw_map():
+    # Outside the road
+    gameDisplay.fill(color_green)
+
+    # Road
+    pygame.draw.circle(gameDisplay, color_lightgray, (int(
+        display_height / 2), int(display_height / 2)), int(display_height / 2 - 10))
+    pygame.draw.circle(gameDisplay, color_white, (int(
+        display_height / 2), int(display_height / 2)), int(display_height / 2 - 10), 4)
+
+    pygame.draw.circle(gameDisplay, color_lightgray, (int(
+        display_width - display_height / 2), int(display_height / 2)), int(display_height / 2 - 10))
+    pygame.draw.circle(gameDisplay, color_white, (int(
+        display_width - display_height / 2), int(display_height / 2)), int(display_height / 2 - 10), 4)
+
+    pygame.draw.rect(gameDisplay, color_lightgray, (int(display_height / 2),
+                                                    10, int(display_width - display_height + 20), int(display_height - 20)))
+    pygame.draw.line(gameDisplay, color_white, (int(
+        display_height / 2), 11), (int(display_width - display_height / 2 + 20), 11), 4)
+    pygame.draw.line(gameDisplay, color_white, (int(display_height / 2), int(display_height - 13)),
+                     (int(display_width - display_height / 2 + 20), int(display_height - 13)), 4)
+
+    # Inside the road
+    pygame.draw.circle(gameDisplay, color_green, (int(
+        display_height / 2), int(display_height / 2)), 170)
+    pygame.draw.circle(gameDisplay, color_white, (int(
+        display_height / 2), int(display_height / 2)), 170, 4)
+
+    pygame.draw.circle(gameDisplay, color_green, (int(
+        display_width - display_height / 2), int(display_height / 2)), 170)
+    pygame.draw.circle(gameDisplay, color_white, (int(
+        display_width - display_height / 2), int(display_height / 2)), 170, 4)
+
+    pygame.draw.rect(gameDisplay, color_green, (int(display_height / 2),
+                                                int(display_height / 2) - 170, int(display_width - display_height), 340))
+    pygame.draw.line(gameDisplay, color_white, (int(display_height / 2), int(
+        display_height / 2) - 170), (int(display_width - display_height / 2), int(
+            display_height / 2) - 170), 4)
+    pygame.draw.line(gameDisplay, color_white, (int(display_height / 2), int(display_height / 2) + 168),
+                     (int(display_width - display_height / 2), int(display_height / 2) + 168), 4)
+
+    # Start line
+    pygame.draw.line(gameDisplay, color_white, (display_height / 2, 3 *
+                                                display_height / 4 - 10), (display_height / 2, display_height - 11), 4)
+
+
+def text_objects(text, font, color):
+    textSurface = font.render(text, True, color)
+    return textSurface, textSurface.get_rect()
+
+
+def winner_loop(winner):
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        textStyle = pygame.font.Font('freesansbold.ttf', 120)
+        if winner == 0:
+            gameDisplay.fill(color_lightgray)
+            TextSurf, TextRect = text_objects(
+                'Player ' + str(winner) + ' wins!', textStyle, color_black)
+        elif winner == 1:
+            gameDisplay.fill(color_lightgray)
+            TextSurf, TextRect = text_objects(
+                'Player ' + str(winner) + ' wins!', textStyle, color_red)
+        elif winner == 2:
+            gameDisplay.fill(color_lightgray)
+            TextSurf, TextRect = text_objects(
+                'Player ' + str(winner) + ' wins!', textStyle, color_green)
+        elif winner == 3:
+            gameDisplay.fill(color_lightgray)
+            TextSurf, TextRect = text_objects(
+                'Player ' + str(winner) + ' wins!', textStyle, color_blue)
+
+        TextRect.center = ((display_width / 2, display_height / 2 - 20))
+        gameDisplay.blit(TextSurf, TextRect)
+
+        pygame.display.update()
+        clock.tick(60)
+
+
+def loser_loop():
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        gameDisplay.fill(color_black)
+
+        textStyle = pygame.font.Font('freesansbold.ttf', 120)
+        TextSurf, TextRect = text_objects('Game Over!', textStyle, color_red)
+        TextRect.center = ((display_width / 2, display_height / 2 - 20))
+        gameDisplay.blit(TextSurf, TextRect)
+
+        pygame.display.update()
+        clock.tick(60)
 
 
 def game_loop():
-    x = (display_width / 2 - tempCar.get_width()/2)
-    y = (display_height / 2 + 200 - tempCar.get_height()/2)
+    createPlayer()
 
-    player = Player("LMAO", x, y)
+    global gameOver
+    global winner
 
-    score = 0
-    distance = 0
+    gameOver = False
+    winner = -1
 
-    while True:
-
+    while not gameOver:
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
 
-            player.checkinputs(event)
+            checkinputs(event)
 
-        # Early Frame Code
-        player.reactinput()
+        # Draw Map
+        draw_map()
 
-        # Draw Game Objects
-        gameDisplay.fill(color_white)
+        # Draw UI Background
+        pygame.draw.rect(gameDisplay, color_darkgray, [0, 720, 1280, 80])
 
-        player.draw()
+        # Game logic
+        for player in players:
+            if player.alive and not gameOver:
+                player.draw()
 
-        # UI
-        debug_display_speed(player.speed)
-        display_score(player.score)
+                if player.turnL:
+                    player.updateVel(0.05)
 
-        # Late Frame Code
+                player.x += player.vx
+                player.y += player.vy
+
+                # Collision check
+                if player.x > 368 and player.x < 912:
+                    if player.y + settings_imagesize / 2 > 18 and player.y - settings_imagesize / 2 < 182:
+                        continue
+                    elif player.y + settings_imagesize / 2 > 538 and player.y - settings_imagesize / 2 < 702:
+                        continue
+                    else:
+                        player.alive = False
+                        player.updateLapCounter()
+                        if len(players) == 1:
+                            gameOver = True
+                        checkAlive()
+                else:
+                    dx0 = player.x - display_height / 2
+                    dy0 = player.y - display_height / 2
+                    dist0 = math.sqrt(dx0 * dx0 + dy0 * dy0)
+
+                    dx1 = player.x - display_width + display_height / 2
+                    dy1 = player.y - display_height / 2
+                    dist1 = math.sqrt(dx1 * dx1 + dy1 * dy1)
+
+                    if dist0 + settings_imagesize / 2 > 178 and dist0 - settings_imagesize / 2 < display_height / 2 - 18:
+                        continue
+                    elif dist1 + settings_imagesize / 2 > 178 and dist1 - settings_imagesize / 2 < display_height / 2 - 18:
+                        continue
+                    else:
+                        player.alive = False
+                        player.updateLapCounter()
+                        if len(players) == 1:
+                            gameOver = True
+                        checkAlive()
+            else:
+                # Trail of dead player
+                continue
+
+        # Update Scoreboard
+        for player in players:
+            player.updateLapCounter()
 
         pygame.display.update()
         clock.tick(60)
+
+    if winner != -1:
+        winner_loop(winner)
+    else:
+        loser_loop()
 
 
 game_loop()
