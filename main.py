@@ -20,6 +20,10 @@ color_red = (255, 0, 0)
 color_green = (0, 255, 0)
 color_blue = (0, 0, 255)
 
+color_cyan = (0, 255, 255)
+color_magenta = (255, 0, 255)
+color_yellow = (255, 255, 0)
+
 gameDisplay = pygame.display.set_mode((display_width, display_height + 80))
 pygame.display.set_caption('bee-racer')
 clock = pygame.time.Clock()
@@ -35,6 +39,7 @@ settings_bgpattern = pygame.image.load('assets/backgrounds/pat_grass.jpg')
 players = []
 gameOver = False
 winner = -1
+player_count = 2
 
 
 def checkinputs(event):
@@ -103,7 +108,7 @@ class Player:
         self.vy = 0
         self.a = math.pi / 2
 
-        # Set lap counting parameters
+        # Set lap counting variables
         self.holdStart = 0
         self.doChecks = True
         self.check0 = True
@@ -111,13 +116,6 @@ class Player:
         self.check2 = True
         self.check3 = True
         self.lapCount = 0
-
-        self.alive = True
-        self.turnL = False
-        self.image = pygame.image.load(
-            'assets/sprites/p' + str(ident) + '.png')
-        self.image = pygame.transform.scale(
-            self.image, (settings_imagesize, settings_imagesize))
 
         # Set player color
         if ident == 0:
@@ -129,7 +127,14 @@ class Player:
         elif ident == 3:
             self.color = (0, 0, 255)
 
-        # Set lap counter variables
+        # Misc variables
+        self.trail = []
+        self.alive = True
+        self.turnL = False
+        self.image = pygame.image.load(
+            'assets/sprites/p' + str(ident) + '.png')
+        self.image = pygame.transform.scale(
+            self.image, (settings_imagesize, settings_imagesize))
 
     def updateVel(self, angle):
         self.a += angle
@@ -232,6 +237,114 @@ def text_objects(text, font, color):
     return textSurface, textSurface.get_rect()
 
 
+def intro_loop():
+    global player_count
+    stopIntro = False
+
+    leftHL = False
+
+    rightHL = False
+
+    while not stopIntro:
+
+        gameDisplay.fill(color_white)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    leftHL = True
+                    if player_count > 1:
+                        player_count -= 1
+                elif event.key == pygame.K_RIGHT:
+                    rightHL = True
+                    if player_count < 4:
+                        player_count += 1
+                elif event.key == pygame.K_SPACE:
+                    stopIntro = True
+
+            elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_LEFT:
+                    leftHL = False
+                elif event.key == pygame.K_RIGHT:
+                    rightHL = False
+
+        # Player Count Display
+        textStyle = pygame.font.Font('freesansbold.ttf', 120)
+        TextSurf, TextRect = text_objects(
+            str(player_count), textStyle, color_red)
+        TextRect.midtop = ((display_width / 2, 250))
+        pygame.draw.rect(gameDisplay, color_green,
+                         (TextRect.topleft[0] - 80, TextRect.topleft[1], 200, 121))
+        gameDisplay.blit(TextSurf, TextRect)
+        print(TextRect.midtop)
+
+        # Arrow Left
+        if leftHL:
+            leftBGColor = color_red
+            leftTextColor = color_green
+        else:
+            leftBGColor = color_green
+            leftTextColor = color_red
+
+        textStyle = pygame.font.Font('freesansbold.ttf', 120)
+        TextSurf, TextRect = text_objects(
+            '<', textStyle, leftTextColor)
+        TextRect.topright = ((display_width / 2 - 50, 250))
+        pygame.draw.rect(gameDisplay, leftBGColor,
+                         TextRect)
+        gameDisplay.blit(TextSurf, TextRect)
+
+        # Arrow Right
+        if rightHL:
+            rightBGColor = color_red
+            rightTextColor = color_green
+        else:
+            rightBGColor = color_green
+            rightTextColor = color_red
+
+        textStyle = pygame.font.Font('freesansbold.ttf', 120)
+        TextSurf, TextRect = text_objects(
+            '>', textStyle, rightTextColor)
+        TextRect.topleft = ((display_width / 2 + 50, 250))
+        pygame.draw.rect(gameDisplay, rightBGColor,
+                         TextRect)
+        gameDisplay.blit(TextSurf, TextRect)
+
+        # Player Count Label
+        textStyle = pygame.font.Font('freesansbold.ttf', 60)
+        TextSurf, TextRect = text_objects(
+            'Number of Players:', textStyle, color_blue)
+
+        TextRect.midtop = ((display_width / 2, 180))
+        gameDisplay.blit(TextSurf, TextRect)
+
+        # Top banner
+        pygame.draw.rect(gameDisplay, color_darkgray,
+                         [0, 0, display_width, 128])
+        textStyle = pygame.font.Font('freesansbold.ttf', 120)
+        TextSurf, TextRect = text_objects(
+            'Bee Racer', textStyle, color_green)
+
+        TextRect.midtop = ((display_width / 2, 10))
+        gameDisplay.blit(TextSurf, TextRect)
+
+        # Press Space Info:
+        textStyle = pygame.font.Font('freesansbold.ttf', 40)
+        TextSurf, TextRect = text_objects(
+            'Press \'Space\' to start the game', textStyle, color_yellow)
+        TextRect.midtop = ((display_width / 2, 720))
+        pygame.draw.rect(gameDisplay, color_blue,
+                         TextRect)
+        gameDisplay.blit(TextSurf, TextRect)
+
+        pygame.display.update()
+        clock.tick(60)
+
+
 def winner_loop(winner):
     while True:
         for event in pygame.event.get():
@@ -240,20 +353,17 @@ def winner_loop(winner):
                 quit()
 
         textStyle = pygame.font.Font('freesansbold.ttf', 120)
+        gameDisplay.fill(color_gray)
         if winner == 0:
-            gameDisplay.fill(color_lightgray)
             TextSurf, TextRect = text_objects(
                 'Player ' + str(winner) + ' wins!', textStyle, color_black)
         elif winner == 1:
-            gameDisplay.fill(color_lightgray)
             TextSurf, TextRect = text_objects(
                 'Player ' + str(winner) + ' wins!', textStyle, color_red)
         elif winner == 2:
-            gameDisplay.fill(color_lightgray)
             TextSurf, TextRect = text_objects(
                 'Player ' + str(winner) + ' wins!', textStyle, color_green)
         elif winner == 3:
-            gameDisplay.fill(color_lightgray)
             TextSurf, TextRect = text_objects(
                 'Player ' + str(winner) + ' wins!', textStyle, color_blue)
 
@@ -283,7 +393,9 @@ def loser_loop():
 
 
 def game_loop():
-    createPlayer()
+    global player_count
+    for i in range(0, player_count):
+        createPlayer()
 
     global gameOver
     global winner
@@ -306,16 +418,32 @@ def game_loop():
         # Draw UI Background
         pygame.draw.rect(gameDisplay, color_darkgray, [0, 720, 1280, 80])
 
-        # Game logic
+        # Player handling
         for player in players:
             if player.alive and not gameOver:
+
+                # Trail drawing
+                point_old = {'x': player.x, 'y': player.y}
+                for point in player.trail:
+                    pygame.draw.line(
+                        gameDisplay, player.color, (point_old['x'], point_old['y']), (point['x'], point['y']), 8)
+                    point_old = point
+
+                # Player drawing
                 player.draw()
 
+                # Player input action
                 if player.turnL:
                     player.updateVel(0.05)
 
+                # Player movement
                 player.x += player.vx
                 player.y += player.vy
+
+                # Trail size handling
+                player.trail.insert(0, {'x': player.x, 'y': player.y})
+                if len(player.trail) == 64:
+                    player.trail.pop()
 
                 # Collision check
                 if player.x > 368 and player.x < 912:
@@ -355,22 +483,27 @@ def game_loop():
                     player.holdChecks()
                     if player.check1:
                         player.check3 = True
-                        print('Player ' + str(player.ident) + ' passed checkpoint 3')
+                        print('Player ' + str(player.ident) +
+                              ' passed checkpoint 3')
                     else:
                         player.check1 = True
-                        print('Player ' + str(player.ident) + ' passed checkpoint 1')
+                        print('Player ' + str(player.ident) +
+                              ' passed checkpoint 1')
                 if player.y > 355 and player.y < 375 and player.doChecks:
                     player.holdChecks()
                     if player.check0:
                         player.check2 = True
-                        print('Player ' + str(player.ident) + ' passed checkpoint 2')
+                        print('Player ' + str(player.ident) +
+                              ' passed checkpoint 2')
                     else:
                         player.check0 = True
-                        print('Player ' + str(player.ident) + ' passed checkpoint 0')
+                        print('Player ' + str(player.ident) +
+                              ' passed checkpoint 0')
                 if player.x > 355 and player.x < 375:
                     if player.check0 and player.check1 and player.check2 and player.check3:
                         if player.lapCount != 0:
-                            print('Player ' + str(player.ident) + ' finished a lap')
+                            print('Player ' + str(player.ident) +
+                                  ' finished a lap')
                         player.check0 = False
                         player.check1 = False
                         player.check2 = False
@@ -381,8 +514,17 @@ def game_loop():
                             gameOver = True
 
             else:
-                # Trail of dead player
-                pass
+                # Draw dead players trail till it vanishes
+                if len(player.trail) != 0:
+                    player.trail.pop()
+
+                    point_old = {'x': player.x, 'y': player.y}
+                    for point in player.trail:
+                        pygame.draw.line(
+                            gameDisplay, player.color, (point_old['x'], point_old['y']), (point['x'], point['y']), 8)
+                        point_old = point
+
+                player.draw()
 
         # Update Scoreboard
         for player in players:
@@ -397,6 +539,7 @@ def game_loop():
         loser_loop()
 
 
+intro_loop()
 game_loop()
 
 pygame.quit()
